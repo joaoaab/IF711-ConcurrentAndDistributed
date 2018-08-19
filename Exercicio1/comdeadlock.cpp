@@ -5,72 +5,72 @@
 #include <vector>
 #include <string>
 
-int custo_bom = 0;
-int indice = 0;
-int custo_ruim = 0;
+int good_quantity = 0;
+int index = 0;
+int repair_quantity = 0;
 
-std::mutex xflags,xbom;
+std::mutex mutex_files,mutex_bom;
 std::mutex mutex_array[100];
 
 
 
-void contador(std::vector<int>& flag, std::vector<int>& custo_ruim ,int num_arch){
-    int f,q;
-    xflags.lock();
+void contador(std::vector<int>& flag, std::vector<int>& repair_quantity ,int num_arch){
+    int arrow_type,quantity;
+    mutex_files.lock();
     std::ifstream input;
-    while(indice < num_arch){
-        xbom.lock();
+    while(index < num_arch){
+        mutex_bom.lock();
         while(!input.is_open()){
-            if(!flag[indice]){
-                flag[indice] = 1;
-                input.open(std::to_string(indice) + ".in");
+            if(!flag[index]){
+                flag[index] = 1;
+                input.open(std::to_string(index) + ".in");
             }
-            indice++;
+            index++;
         }
-        xflags.unlock();    
-        while(input >> f >> q){
+        mutex_files.unlock();    
+        while(input >> arrow_type >> quantity){
             if(q == 0){
-                custo_bom += q;
+                good_quantity += quantity;
             }
             else{
-                mutex_array[f].lock();
-                custo_ruim[f] -= q;
-                mutex_array[f].unlock();
+                mutex_array[arrow_type].lock();
+                repair_quantity[arrow_type] -= quantity;
+                mutex_array[arrow_type].unlock();
             }
         }
-        xflags.lock();
-        xbom.unlock();
+        mutex_files.lock();
+        mutex_bom.unlock();
         if(input.is_open()){
             input.close();
         }
     }
-    xflags.unlock();
+    mutex_files.unlock();
 }
 
 
 
 int main(){
-    int num_threads, flechas, i, f, q, rc, num_arch;
+    int num_threads, arrows, i, f, q, rc, num_arch;
     std::string entrada;
     std::ifstream input("entrada.in");
-    input >> num_arch >> num_threads >> flechas;
-    std::vector<int> preco(flechas, 0);
-    std::vector<int> custo_ruim(flechas, 0);
+    input >> num_arch >> num_threads >> arrows;
+    std::vector<int> price(arrows, 0);
+    std::vector<int> repair_quantity(arrows, 0);
     std::vector<std::thread> threads;
     std::vector<int> flag(num_arch , 0);
-    std::vector<std::mutex> mutex_array(flechas);
-    for(int i = 0; i < flechas ; i++){
-        input >> preco[i];
+    std::vector<std::mutex> mutex_array(arrows);
+    for(int i = 0; i < arrows ; i++){
+        input >> price[i];
     }
     for(int i = 0; i < num_threads; i++){
-        threads.push_back(std::thread(contador,std::ref(flag), std::ref(custo_ruim),num_arch));
+        threads.push_back(std::thread(contador,std::ref(flag), std::ref(repair_quantity),num_arch));
     }
     for(auto& th : threads){
         th.join();
     }
-    std::cout << custo_bom << " Flechas em bom estado\n\n";
-    for(int i = 0 ; i < flechas ; i++){
-        std::cout << "Custo de consertar as flechas de tipo " << i+1 << ": R$ " << preco[i]*custo_ruim[i]<< std::endl;
+    std::cout << mutex_bom << " arrows em bom estado\n\n";
+    for(int i = 0 ; i < arrows ; i++){
+        std::cout << "Custo de consertar as arrows de tipo " << i+1 << ": R$ " << price[i]*repair_quantity[i]<< std::endl;
     }
     return 0;
 }
