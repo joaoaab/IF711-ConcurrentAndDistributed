@@ -29,7 +29,7 @@ void contador(std::vector<int>& flag, std::vector<int>& repair_quantity ,int num
         }
         mutex_files.unlock();    
         while(input >> arrow_type >> quantity){
-            if(q == 0){
+            if(quantity >= 0){
                 good_quantity += quantity;
             }
             else{
@@ -68,7 +68,7 @@ int main(){
     for(auto& th : threads){
         th.join();
     }
-    std::cout << mutex_bom << " arrows em bom estado\n\n";
+    std::cout << good_quantity << " arrows em bom estado\n\n";
     for(int i = 0 ; i < arrows ; i++){
         std::cout << "Custo de consertar as arrows de tipo " << i+1 << ": R$ " << price[i]*repair_quantity[i]<< std::endl;
     }

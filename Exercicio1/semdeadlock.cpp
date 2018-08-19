@@ -38,10 +38,7 @@ void contador(std::vector<int>& flag, std::vector<int>& repair_quantity ,int num
         // Calculando custos a partir do arquivo
         // Duas regiões críticas
         while(input >> arrow_type >> quantity){
-            if(quantity == 0){
-                good_quantity += quantity;
-            }
-            else if(quantity > 0){
+            if(quantity >= 0){
                 mutex_bom.lock();
                 good_quantity += quantity;
                 mutex_bom.unlock();
