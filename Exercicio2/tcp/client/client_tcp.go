@@ -18,7 +18,7 @@ func main() {
 	//simple Read
 	buffer := make([]byte, 1024)
 	conn.Read(buffer)
-
+	//fmt.Println("buffer")
 	//simple write
 	conn.Write([]byte("Hello from client"))
 }
