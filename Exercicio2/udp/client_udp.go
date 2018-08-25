@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	//Connect TCP
+	//Connect UDP
 	conn, err := net.Dial("udp", "localhost:1313")
 	if err != nil {
 		fmt.Println(err)
