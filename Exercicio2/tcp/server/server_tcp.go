@@ -1,5 +1,5 @@
 package main
-g:syntastic_quiet_messages
+
 import (
 	"fmt"
 	"net"
@@ -32,8 +32,9 @@ func handleConnection(conn net.Conn) {
 	buffer := make([]byte, 1024)
 	// Read the incoming connection into the buffer.
 	reqLen, err := conn.Read(buffer)
+	reqLen = reqLen + 1 - 1
 	if err != nil {
-	  fmt.Println("Error reading:", err.Error())
+		fmt.Println("Error reading:", err.Error())
 	}
 	// Send a response back to person contacting us.
 	conn.Write([]byte("Message received."))
