@@ -1,43 +1,74 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"log"
 	"net"
 	"os"
 )
 
+func acceptConnections(server net.Listener, newConnections chan net.Conn) {
+	for {
+		c, err := server.Accept()
+		if err != nil {
+			fmt.Println("Error Acception:", err.Error)
+			os.Exit(1)
+		}
+		fmt.Println("Separando a thread para comunicação")
+		newConnections <- c
+	}
+}
+
+func handleConnection(conn net.Conn, messages chan string) {
+	reader := bufio.NewReader(conn)
+	for {
+		message, err := reader.ReadString('\n')
+		if err != nil {
+			break
+		}
+		messages <- fmt.Sprintf("Messagem Recebida : %s", message)
+	}
+}
+
 func main() {
+	nClients := 0
+	allClients := make(map[net.Conn]int)
+	newConnections := make(chan net.Conn)
+	deadConnections := make(chan net.Conn)
+	messages := make(chan string)
 	// listen to incoming tcp connections
-	l, err := net.Listen("tcp", "localhost:1313")
+	l, err := net.Listen("tcp", "localhost:1337")
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
 		os.Exit(1)
 	}
 	defer l.Close()
 	// A common pattern is to start a loop to continously accept connections
+	go acceptConnections(l, newConnections)
 	for {
-		//accept connections using Listener.Accept()
-		c, err := l.Accept()
-		if err != nil {
-			fmt.Println("Error Accepting:", err.Error())
-			os.Exit(1)
-		}
-		//It's common to handle accepted connection on different goroutines
-		go handleConnection(c)
-	}
-}
+		select {
+		case conn := <-newConnections:
+			log.Printf("Aceitei Novo Cliente")
+			allClients[conn] = nClients
+			nClients++
+			go handleConnection(conn, messages)
 
-func handleConnection(conn net.Conn) {
-	// Make a buffer to hold incoming data.
-	buffer := make([]byte, 1024)
-	// Read the incoming connection into the buffer.
-	reqLen, err := conn.Read(buffer)
-	reqLen = reqLen + 1 - 1
-	if err != nil {
-		fmt.Println("Error reading:", err.Error())
+		case message := <-messages:
+			for conn, _ := range allClients {
+				go func(conn net.Conn, message string) {
+					_, err := conn.Write([]byte(message))
+					if err != nil {
+						deadConnections <- conn
+					}
+				}(conn, message)
+			}
+			fmt.Println("Nova menssagem recebida : ", message)
+			fmt.Println("Transmitindo para todos os clientes.")
+
+		case conn := <-deadConnections:
+			fmt.Println("Cliente Desconectado")
+			delete(allClients, conn)
+		}
 	}
-	// Send a response back to person contacting us.
-	conn.Write([]byte("Message received."))
-	// Close the connection when you're done with it.
-	conn.Close()
 }
