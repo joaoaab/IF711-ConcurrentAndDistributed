@@ -20,7 +20,7 @@ func acceptConnections(server net.Listener, newConnections chan net.Conn) {
 	}
 }
 
-func handleConnection(conn net.Conn, messages chan string) {
+func handleConnection(conn net.Conn, messages chan string, deadConnections chan net.Conn) {
 	reader := bufio.NewReader(conn)
 	for {
 		message, err := reader.ReadString('\n')
@@ -29,6 +29,7 @@ func handleConnection(conn net.Conn, messages chan string) {
 		}
 		messages <- fmt.Sprintf("Messagem Recebida : %s", message)
 	}
+	deadConnections <- conn
 }
 
 func main() {
@@ -52,7 +53,7 @@ func main() {
 			log.Printf("Aceitei Novo Cliente")
 			allClients[conn] = nClients
 			nClients++
-			go handleConnection(conn, messages)
+			go handleConnection(conn, messages, deadConnections)
 
 		case message := <-messages:
 			for conn, _ := range allClients {
