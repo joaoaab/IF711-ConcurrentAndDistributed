@@ -1,54 +1,39 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"net"
-	"os"
+	"strconv"
+	"time"
 )
 
-func sendMessage(out chan string) {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Println("Digite para enviar:")
-		sendMessage, _ := reader.ReadString('\n')
-		fmt.Println("digitado : " + sendMessage)
-		out <- fmt.Sprintf("%s", sendMessage[:len(sendMessage)-1])
-	}
-}
-
-func receiveMessage(server net.Conn, in chan string) {
-	reader := bufio.NewReader(server)
-	for {
-		message, _ := reader.ReadString('\n')
-		in <- message
-
+/*CheckError A Simple function to verify error*/
+func CheckError(err error) {
+	if err != nil {
+		fmt.Println("Error: ", err)
 	}
 }
 
 func main() {
-	//Connect TCP
-	conn, err := net.Dial("udp", "localhost:1337")
-	incomingMessages := make(chan string)
-	outgoingMessages := make(chan string)
-	fmt.Println("--Tentando conexao--")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	//efer conn.Close()
-	fmt.Println("--conexao feita--")
-	go sendMessage(outgoingMessages)
-	go receiveMessage(conn, incomingMessages)
+	ServerAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:10001")
+	CheckError(err)
+
+	LocalAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
+	CheckError(err)
+
+	Conn, err := net.DialUDP("udp", LocalAddr, ServerAddr)
+	CheckError(err)
+
+	defer Conn.Close()
+	i := 0
 	for {
-		select {
-		case text := <-incomingMessages:
-			fmt.Println("Server -> " + text)
-
-		case text := <-outgoingMessages:
-			fmt.Printf("Enviando : %s \n", text)
-			conn.Write([]byte(text + "\n"))
+		msg := strconv.Itoa(i)
+		i++
+		buf := []byte(msg)
+		_, err := Conn.Write(buf)
+		if err != nil {
+			fmt.Println(msg, err)
 		}
+		time.Sleep(time.Second * 1)
 	}
-
 }
