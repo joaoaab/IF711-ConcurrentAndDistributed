@@ -46,15 +46,17 @@ func main() {
 		}
 
 		for port, _ := range allClients {
-			FullAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:" + strconv.Itoa(port))
-			if err != nil {
-				fmt.Println("Resolver failed with error: ", err)
-				continue
-			}
-			_, errr := ServerConn.WriteToUDP(buf[0:n], FullAddr)
-			if errr != nil {
-				fmt.Println("WrtieToUDP failed with error: ", errr)
-				continue
+			if addr.Port != port {
+				FullAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:"+strconv.Itoa(port))
+				if err != nil {
+					fmt.Println("Resolver failed with error: ", err)
+					continue
+				}
+				_, errr := ServerConn.WriteToUDP(buf[0:n], FullAddr)
+				if errr != nil {
+					fmt.Println("WrtieToUDP failed with error: ", errr)
+					continue
+				}
 			}
 		}
 
