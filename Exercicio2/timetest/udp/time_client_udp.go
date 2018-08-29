@@ -14,7 +14,7 @@ func main() {
 	buf := make([]byte, 1024)
 	for i := 0; i < 50; i++ {
 		start := time.Now()
-		for j := 0; j < 1000; j++ {
+		for j := 0; j < 10000; j++ {
 			Conn.Write([]byte(string(j) + "\n"))
 			Conn.ReadFromUDP(buf)
 		}

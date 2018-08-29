@@ -4,11 +4,11 @@ from matplotlib.ticker import MaxNLocator
 from collections import namedtuple
 
 
-avg_tcp = 88.52175
-stdev_tcp = 7.779
+avg_tcp = 940.4
+stdev_tcp = 77.36
 
-avg_udp = 12.4695
-stdev_udp = 1.279
+avg_udp = 107.478
+stdev_udp = 4.8226
 
 protocols = ["tcp", "udp"]
 

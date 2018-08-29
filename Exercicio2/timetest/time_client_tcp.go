@@ -18,7 +18,7 @@ func main() {
 	reader := bufio.NewReader(conn)
 	for i := 0; i < 50; i++ {
 		start := time.Now()
-		for j := 0; j < 1000; j++ {
+		for j := 0; j < 10000; j++ {
 			conn.Write([]byte(string(j) + "\n"))
 			reader.ReadString('\n')
 		}
