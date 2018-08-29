@@ -64,7 +64,7 @@ func main() {
 					}
 				}(conn, message)
 			}
-			fmt.Println("Nova menssagem recebida : ", message)
+			fmt.Println(message)
 			fmt.Println("Transmitindo para todos os clientes.")
 
 		case conn := <-deadConnections:

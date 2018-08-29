@@ -46,7 +46,6 @@ func main() {
 			fmt.Println("Server -> " + text)
 
 		case text := <-outgoingMessages:
-			fmt.Printf("Enviando : %s \n", text)
 			conn.Write([]byte(text + "\n"))
 		}
 	}

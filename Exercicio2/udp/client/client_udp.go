@@ -19,7 +19,6 @@ func sendMessage(messages chan string) {
 	for {
 		fmt.Printf("Digite uma mensagem para enviar : ")
 		sendMessage, _ := reader.ReadString('\n')
-		fmt.Println("Digitado : ", sendMessage)
 		messages <- fmt.Sprintf("%s", sendMessage[:len(sendMessage)-1])
 	}
 }
@@ -43,6 +42,8 @@ func main() {
 	CheckError(err)
 
 	Conn, err := net.DialUDP("udp", LocalAddr, ServerAddr)
+	start := []byte("starting")
+	Conn.Write(start)
 	CheckError(err)
 
 	go sendMessage(outgoingMessages)
@@ -54,7 +55,6 @@ func main() {
 			fmt.Println("Server -> " + message)
 
 		case message := <-outgoingMessages:
-			fmt.Printf("Enviando : %s \n", message)
 			buf := []byte(message)
 			Conn.Write(buf)
 		}
