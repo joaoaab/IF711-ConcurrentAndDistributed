@@ -22,7 +22,7 @@ func sendMessage(ch *amqp.Channel) {
 		false,        // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        []byte("Oi"), // Mensagem a ser enviada
+			Body:        []byte("10bytesisf"), // Mensagem a ser enviada
 		})
 	failOnError(err, "Failed to publish a message")
 }
@@ -63,7 +63,7 @@ func receiveMessage(ch *amqp.Channel) {
 	for range msgs {
 		// log.Printf(" [x] %s", d.Body)
 		innerlimit++
-		if innerlimit < 10000 { // Iterações de envios de mensagem
+		if innerlimit < 1000 { // Iterações de envios de mensagem
 			sendMessage(ch) // Envio sincrono com o recebimento
 		} else {
 			break
@@ -96,8 +96,7 @@ func main() {
 		start := time.Now()
 		receiveMessage(ch)
 		elapsed := time.Since(start)
-		fmt.Println(float64(elapsed) / float64(time.Millisecond))
-
+		fmt.Printf("%.0f\n", float64(elapsed)/float64(time.Millisecond))
 		// Count
 		outlimit++
 	}
