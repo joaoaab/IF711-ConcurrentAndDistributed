@@ -1,6 +1,10 @@
 package algorithm
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
+
 	"./requestor/models"
 )
 
@@ -13,6 +17,13 @@ func (c *Calculator) Fib(x int) int {
 
 	op.SetName("fib")
 	op.AddParam(x)
+
+	msg, err := json.Marshal(op)
+	if (err) != nil {
+		fmt.Println("error:", err)
+	} else {
+		os.Stdout.Write(msg)
+	}
 
 	return x
 }

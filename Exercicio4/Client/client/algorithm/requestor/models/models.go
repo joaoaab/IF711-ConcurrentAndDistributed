@@ -1,24 +1,34 @@
 package models
 
+import "fmt"
+
 // Operation data to send.
 type Operation struct {
-	name   string
-	params []int
+	Name   string
+	Params []int
 }
 
 // AddParam to Operation.
 func (op *Operation) AddParam(x int) {
-	op.params = append(op.params, x)
+	op.Params = append(op.Params, x)
 }
 
 // GetParam and remove it from Operation.
 func (op *Operation) GetParam() int {
-	r := op.params[0]
-	op.params = op.params[1:]
+	r := op.Params[0]
+	op.Params = op.Params[1:]
 	return r
 }
 
 // SetName test.
 func (op *Operation) SetName(name string) {
-	op.name = name
+	op.Name = name
+}
+
+// Print test.
+func (op *Operation) Print() {
+	fmt.Println(op.Name)
+	for _, param := range op.Params {
+		fmt.Println(param)
+	}
 }
