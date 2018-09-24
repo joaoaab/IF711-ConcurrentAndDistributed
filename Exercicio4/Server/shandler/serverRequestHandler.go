@@ -10,10 +10,14 @@ import (
 // Messages Channel
 var Messages = make(chan Message)
 
+// Reply Channel
+var Reply = make(chan Message)
+
 // Message type
 type Message struct {
-	Data string
-	Addr net.Addr
+	Data     string
+	Addr     net.Addr
+	Protocol int
 }
 
 func checkError(err error) {
@@ -42,7 +46,7 @@ func handleTCPConnection(conn net.Conn, TCPMessages chan Message, deadTCPConnect
 		if err != nil {
 			break
 		}
-		m := Message{message, conn.RemoteAddr()}
+		m := Message{message, conn.RemoteAddr(), 0}
 		//fmt.Println("li do socket " + m.Data)
 		TCPMessages <- m
 	}
@@ -56,7 +60,7 @@ func handleUDPMessages(conn *net.UDPConn, allClients map[int]int, udpMessages ch
 		if err != nil {
 			continue
 		}
-		m := Message{string(buf[0:n]), addr}
+		m := Message{string(buf[0:n]), addr, 1}
 		udpMessages <- m
 	}
 }
@@ -97,6 +101,25 @@ func Handle() {
 			Messages <- msg
 		case msg := <-udpMessages:
 			Messages <- msg
+		case ret := <-Reply:
+			address := ret.Addr
+			data := ret.Data
+			switch ret.Protocol {
+			case 0:
+				TCPConnections[address].Write([]byte(data))
+
+			case 1:
+				fullAddr, err := net.ResolveUDPAddr("udp", address.String())
+				if err != nil {
+					fmt.Println("Resolver Failed with error : ", err)
+					continue
+				}
+				_, err = serverConn.WriteToUDP([]byte(data), fullAddr)
+			case 2:
+				// rabbitmq
+				continue
+			}
+
 		}
 	}
 }
