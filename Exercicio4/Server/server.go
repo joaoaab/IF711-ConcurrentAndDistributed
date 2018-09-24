@@ -4,11 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 
 	"./models"
 	"./shandler"
 )
+
+// 0 for TCP
+// 1 for UDP
+// 2 for Middleware
+const connType = 0
 
 func fib(n int) int {
 	if n == 0 {
@@ -40,17 +44,22 @@ func mmc(a, b int) int {
 }
 
 func pow(base, exponent int) int {
-	if base < 0 {
-		base *= -1
+	ans := 1
+	if exponent == 0 {
+		return 1
+	}
+	if exponent < 0 {
+		base = 1 / base
+		exponent *= -1
 	}
 	for exponent > 0 {
 		if exponent%2 == 1 {
-			base *= base
+			ans *= base
 		}
-		exponent >>= 1
-		base *= base * base
+		base = base * base
+		exponent /= 2
 	}
-	return base
+	return ans
 }
 
 //Invoke Invokes the calculations and return the json of the answer
@@ -64,34 +73,58 @@ func Invoke(data string) models.Operation {
 	return res
 }
 
+func calculate(frame models.Operation) int {
+	var ans int
+	switch frame.GetName() {
+	case "fib":
+		ans = fib(frame.GetParam())
+	case "pow":
+		base := frame.GetParam()
+		exp := frame.GetParam()
+		ans = pow(base, exp)
+	case "mdc":
+		a := frame.GetParam()
+		b := frame.GetParam()
+		ans = mdc(a, b)
+	case "mmc":
+		a := frame.GetParam()
+		b := frame.GetParam()
+		ans = mmc(a, b)
+	}
+	return ans
+}
+
 func sendAnswer(msg shandler.Message, frame models.Operation, ans int) {
 	var ret shandler.Message
 	ret.Protocol = msg.Protocol
 	ret.Addr = msg.Addr
-	var pack models.Response
-	pack.Name = frame.Name
-	pack.Result = ans
+	pack := new(models.Response)
+	pack.SetName(frame.GetName())
+	pack.SetResult(ans)
 	data, err := json.Marshal(pack)
-	ret.Data = string(data)
+	ret.Data = string(data) + "\n"
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(11)
 	}
-	println(ret.Data)
+	println("Package Sent : " + ret.Data)
 	shandler.Reply <- ret
 }
 
 func main() {
-	go shandler.Handle()
+	switch connType {
+	case 0:
+		go shandler.HandleTCP()
+	case 1:
+		go shandler.HandleUDP()
+	}
 	for {
 		select {
 		case msg := <-shandler.Messages:
-			fmt.Println(msg.Data + " protocol : " + strconv.Itoa(msg.Protocol))
+			fmt.Println("Package Received : " + msg.Data)
 			frame := Invoke(msg.Data)
-			if frame.GetName() == "fib" {
-				ans := fib(frame.GetParam())
-				sendAnswer(msg, frame, ans)
-			}
+			ans := calculate(frame)
+			sendAnswer(msg, frame, ans)
 		}
 	}
 }

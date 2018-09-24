@@ -54,6 +54,16 @@ func (r *Response) GetName() string {
 	return r.Name
 }
 
+// SetName docstring
+func (r *Response) SetName(name string) {
+	r.Name = name
+}
+
+// SetResult docstring
+func (r *Response) SetResult(result int) {
+	r.Result = result
+}
+
 // Print for test purposes.
 func (r *Response) Print() {
 	fmt.Println(r.Name, r.GetResult())

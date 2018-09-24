@@ -31,7 +31,7 @@ func acceptTCPConnections(server net.Listener, newConnections chan net.Conn) {
 	for {
 		c, err := server.Accept()
 		if err != nil {
-			fmt.Println("Error Acception:", err.Error)
+			fmt.Println("Error Acception:", err.Error())
 			os.Exit(1)
 		}
 		fmt.Println("Separando a thread para comunicação")
@@ -65,18 +65,38 @@ func handleUDPMessages(conn *net.UDPConn, allClients map[int]int, udpMessages ch
 	}
 }
 
-// Handle handles connections with tcp udp and rabbitmq
-func Handle() {
+// HandleTCP handles tcp connections for the server
+func HandleTCP() {
 	TCPConnections := make(map[net.Addr]net.Conn)
 	newTCPConnections := make(chan net.Conn)
 	deadTCPConnections := make(chan net.Conn)
 	TCPMessages := make(chan Message)
-
-	s, err := net.Listen("tcp", "localhost:6969")
+	s, err := net.Listen("tcp", "localhost:6900")
 	checkError(err)
 	go acceptTCPConnections(s, newTCPConnections)
 	defer s.Close()
 
+	for {
+		select {
+		case conn := <-newTCPConnections:
+			TCPConnections[conn.RemoteAddr()] = conn
+			go handleTCPConnection(conn, TCPMessages, deadTCPConnections)
+			fmt.Println(conn.RemoteAddr())
+		case conn := <-deadTCPConnections:
+			delete(TCPConnections, conn.RemoteAddr())
+		case msg := <-TCPMessages:
+			Messages <- msg
+		case ret := <-Reply:
+			address := ret.Addr
+			data := ret.Data
+			TCPConnections[address].Write([]byte(data))
+		}
+	}
+}
+
+// HandleUDP handles udp connections for the server
+func HandleUDP() {
+	// Setting up UDP
 	udpClients := make(map[int]int)
 	udpMessages := make(chan Message)
 	serverAddr, err := net.ResolveUDPAddr("udp", ":1111")
@@ -90,36 +110,17 @@ func Handle() {
 
 	for {
 		select {
-		case conn := <-newTCPConnections:
-			TCPConnections[conn.RemoteAddr()] = conn
-			go handleTCPConnection(conn, TCPMessages, deadTCPConnections)
-			fmt.Println(conn.RemoteAddr())
-		case conn := <-deadTCPConnections:
-			delete(TCPConnections, conn.RemoteAddr())
-		case msg := <-TCPMessages:
-			//fmt.Println("chegou messagem no requesthandler : " + msg.Data)
-			Messages <- msg
 		case msg := <-udpMessages:
 			Messages <- msg
 		case ret := <-Reply:
 			address := ret.Addr
 			data := ret.Data
-			switch ret.Protocol {
-			case 0:
-				TCPConnections[address].Write([]byte(data))
-
-			case 1:
-				fullAddr, err := net.ResolveUDPAddr("udp", address.String())
-				if err != nil {
-					fmt.Println("Resolver Failed with error : ", err)
-					continue
-				}
-				_, err = serverConn.WriteToUDP([]byte(data), fullAddr)
-			case 2:
-				// rabbitmq
+			fullAddr, err := net.ResolveUDPAddr("udp", address.String())
+			if err != nil {
+				fmt.Println("Resolver Failed with error : ", err)
 				continue
 			}
-
+			_, err = serverConn.WriteToUDP([]byte(data), fullAddr)
 		}
 	}
 }
