@@ -5,10 +5,10 @@ import (
 	"./requestor/models"
 )
 
-// Calculator test.
+// Calculator docstring.
 type Calculator struct{}
 
-// Fib test.
+// Fib docstring.
 func (c *Calculator) Fib(x int) int {
 	requestor := new(requestor.Requestor)
 	op := new(models.Operation)
@@ -21,35 +21,44 @@ func (c *Calculator) Fib(x int) int {
 	return res.GetResult()
 }
 
-// Mdc test.
+// Mdc docstring.
 func (c *Calculator) Mdc(x int, y int) int {
+	requestor := new(requestor.Requestor)
 	op := new(models.Operation)
 
 	op.SetName("mdc")
 	op.AddParam(x)
 	op.AddParam(y)
 
-	return x
+	res := requestor.Invoke(op)
+
+	return res.GetResult()
 }
 
-// Mmc test.
+// Mmc docstring.
 func (c *Calculator) Mmc(x int, y int) int {
+	requestor := new(requestor.Requestor)
 	op := new(models.Operation)
 
 	op.SetName("mmc")
 	op.AddParam(x)
 	op.AddParam(y)
 
-	return x
+	res := requestor.Invoke(op)
+
+	return res.GetResult()
 }
 
-// Pow test.
+// Pow docstring.
 func (c *Calculator) Pow(x int, y int) int {
+	requestor := new(requestor.Requestor)
 	op := new(models.Operation)
 
 	op.SetName("pow")
 	op.AddParam(x)
 	op.AddParam(y)
 
-	return x
+	res := requestor.Invoke(op)
+
+	return res.GetResult()
 }
