@@ -7,14 +7,10 @@ import (
 	"os"
 )
 
-type TCPMessage struct{
+
+type Message struct{
 	data string
 	addr net.Addr
-}
-
-type UDPMessage struct{
-	data string
-	addr net.UDPAddr
 }
 
 func CheckError(err error) {
@@ -36,7 +32,7 @@ func acceptTcpConnections(server net.Listener, newConnections chan net.Conn) {
 	}
 }
 
-func handleTcpConnection(conn net.Conn, tcpMessages chan TCPMessage, deadTcpConnections chan net.Conn) {
+func handleTcpConnection(conn net.Conn, tcpMessages chan Message, deadTcpConnections chan net.Conn) {
 	reader := bufio.NewReader()
 	for {
 		message, err := reader.ReadString('\n')
@@ -49,7 +45,7 @@ func handleTcpConnection(conn net.Conn, tcpMessages chan TCPMessage, deadTcpConn
 	deadTcpConnections <- conn
 }
 
-func handleUdpMessages(conn net.UDPConn, allClients map[int]int ,udpMessages chan UDPMessage, *nClients int){
+func handleUdpMessages(conn net.UDPConn, allClients map[int]int ,udpMessages chan Message, *nClients int){
 	for {
 		n, addr, err := conn.ReadFromUDP(buf) // buf[0:n]
 		if err != nil {
@@ -65,7 +61,6 @@ func handleUdpMessages(conn net.UDPConn, allClients map[int]int ,udpMessages cha
 		}
 		m := UDPMessage{string(buf[0:n]), conn.RemoteAddr}
 		udpMessages <- m
-
 	}
 }
 
@@ -75,7 +70,8 @@ func handleConnections() {
 	tcpConnections := make(map[net.Conn]int)
 	newTcpConnections := make(chan net.Conn)
 	deadTcpConnections := make(chan net.Conn)
-	tcpMessages := make(chan TCPMessage)
+	tcpMessages := make(chan Message)
+	Frame := make(chan Message)
 
 	s, err := net.Listen("tcp", "localhost:6969")
 	CheckError(err)
@@ -83,7 +79,7 @@ func handleConnections() {
 	defer s.Close()
 
 	udpClients := make(map[int]int)
-	udpMessages := make(chan string)
+	udpMessages := make(chan Message)
 	serverAddr, err := net.ResolveUDPAddr("udp", ":1111")
 	CheckError(err)
 
@@ -96,8 +92,10 @@ func handleConnections() {
 	
 	for{
 		select{
-			case message := <-tcpMessages:
-
+			case msg := <-tcpMessages:
+				Message <- msg
+			case msg := <-udpMessages:
+				Message <- msg
 		}
 	}
 }
