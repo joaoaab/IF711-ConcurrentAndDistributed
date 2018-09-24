@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"./shandler"
 )
 
@@ -49,10 +50,11 @@ func pow(base, exponent int) int {
 }
 
 func main() {
+	go shandler.Handle()
 	for {
 		select {
-			msg := <- shandler.Messages:
-				fmt.Println(msg.data)
+		case msg := <-shandler.Messages:
+			fmt.Println(msg.Data)
 		}
 	}
 }
