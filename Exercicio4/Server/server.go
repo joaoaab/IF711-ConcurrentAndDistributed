@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"./shandler"
 )
 
@@ -22,18 +23,18 @@ func fib(n int) int {
 	return c
 }
 
-func mdc(a int, b int) int {
+func mdc(a, b int) int {
 	if b == 0 {
 		return a
 	}
 	return mdc(b, a%b)
 }
 
-func mmc(a int, b int) int {
+func mmc(a, b int) int {
 	return a * b / mdc(a, b)
 }
 
-func pow(base int, exponent int) int {
+func pow(base, exponent int) int {
 	if base < 0 {
 		base *= -1
 	}
@@ -50,8 +51,8 @@ func pow(base int, exponent int) int {
 func main() {
 	for {
 		select {
-			msg := <- shandler.Message:
-
+			msg := <- shandler.Messages:
+				fmt.Println(msg.data)
 		}
 	}
 }

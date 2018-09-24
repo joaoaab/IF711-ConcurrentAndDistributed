@@ -7,6 +7,7 @@ import (
 	"os"
 )
 
+var Messages = chan Message
 
 type Message struct{
 	data string
@@ -93,9 +94,9 @@ func handleConnections() {
 	for{
 		select{
 			case msg := <-tcpMessages:
-				Message <- msg
+				Messages <- msg
 			case msg := <-udpMessages:
-				Message <- msg
+				Messages <- msg
 		}
 	}
 }
