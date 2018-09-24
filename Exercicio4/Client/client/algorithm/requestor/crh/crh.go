@@ -13,11 +13,16 @@ type ClientRequestHandler struct {
 }
 
 // Send test.
-func (crh *ClientRequestHandler) Send() {
+func (crh *ClientRequestHandler) Send(outcoming []byte) {
+	crh.sentMsgSize = len(outcoming)
 	fmt.Printf("%s:%d -> %d\n", crh.Host, crh.Port, crh.sentMsgSize)
 }
 
 // Receive test.
-func (crh *ClientRequestHandler) Receive() {
+func (crh *ClientRequestHandler) Receive() []byte {
+	var jsonBlob = []byte("{\"Name\": \"Fib\", \"Result\": 45}")
+
 	fmt.Printf("%s:%d <- %d\n", crh.Host, crh.Port, crh.receiveMsgSize)
+
+	return jsonBlob
 }

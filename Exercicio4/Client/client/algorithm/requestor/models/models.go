@@ -20,15 +20,31 @@ func (op *Operation) GetParam() int {
 	return r
 }
 
-// SetName test.
+// SetName docstring.
 func (op *Operation) SetName(name string) {
 	op.Name = name
 }
 
-// Print test.
+// Print docstring.
 func (op *Operation) Print() {
 	fmt.Println(op.Name)
 	for _, param := range op.Params {
 		fmt.Println(param)
 	}
+}
+
+// Response docstring.
+type Response struct {
+	Name   string
+	Result int
+}
+
+// GetResult docstring.
+func (r *Response) GetResult() int {
+	return r.Result
+}
+
+// Print for test purposes.
+func (r *Response) Print() {
+	fmt.Println(r.Name, r.GetResult())
 }

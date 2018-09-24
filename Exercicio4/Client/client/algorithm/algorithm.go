@@ -1,10 +1,7 @@
 package algorithm
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-
+	"./requestor"
 	"./requestor/models"
 )
 
@@ -13,19 +10,15 @@ type Calculator struct{}
 
 // Fib test.
 func (c *Calculator) Fib(x int) int {
+	requestor := new(requestor.Requestor)
 	op := new(models.Operation)
 
 	op.SetName("fib")
 	op.AddParam(x)
 
-	msg, err := json.Marshal(op)
-	if (err) != nil {
-		fmt.Println("error:", err)
-	} else {
-		os.Stdout.Write(msg)
-	}
+	res := requestor.Invoke(op)
 
-	return x
+	return res.GetResult()
 }
 
 // Mdc test.
