@@ -117,6 +117,8 @@ func main() {
 		go shandler.HandleTCP()
 	case 1:
 		go shandler.HandleUDP()
+	case 2:
+		go shandler.HandleMiddleware()
 	}
 	for {
 		select {
