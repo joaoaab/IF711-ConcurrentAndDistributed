@@ -24,16 +24,6 @@ type Message struct {
 	Protocol int
 }
 
-// ServerRequestHandler docstring
-type ServerRequestHandler struct {
-	Host          string
-	Port          int
-	connection    *amqp.Connection
-	channel       *amqp.Channel
-	queue         amqp.Queue
-	correlationID string
-}
-
 func randInt(min int, max int) int {
 	return min + rand.Intn(max-min)
 }
@@ -50,72 +40,6 @@ func failOnError(err error, msg string) {
 	if err != nil {
 		log.Fatalf("%s: %s", msg, err)
 	}
-}
-
-// Send Sends messages through rabbitmq middleware
-func (srh *ServerRequestHandler) Send(outcoming []byte) {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-	failOnError(err, "Failed to connect to RabbitMQ")
-
-	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
-
-	q, err := ch.QueueDeclare(
-		"",    // name
-		false, // durable
-		false, // delete when unused
-		true,  // exclusive
-		false, // noWait
-		nil,   // arguments
-	)
-	failOnError(err, "Failed to declare a queue")
-
-	corrID := randomString(32)
-
-	err = ch.Publish(
-		"",          // exchange
-		"rpc_queue", // routing key
-		false,       // mandatory
-		false,       // immediate
-		amqp.Publishing{
-			ContentType:   "text/plain",
-			CorrelationId: corrID,
-			ReplyTo:       q.Name,
-			Body:          outcoming,
-		})
-	failOnError(err, "Failed to publish a message")
-
-	srh.connection = conn
-	srh.channel = ch
-	srh.queue = q
-	srh.correlationID = corrID
-}
-
-// Receive docstring.
-func (srh *ServerRequestHandler) Receive() []byte {
-	defer srh.connection.Close()
-	defer srh.channel.Close()
-
-	msg := []byte("error")
-	msgs, err := srh.channel.Consume(
-		srh.queue.Name, // queue
-		"",             // consumer
-		true,           // auto-ack
-		false,          // exclusive
-		false,          // no-local
-		false,          // no-wait
-		nil,            // args
-	)
-	failOnError(err, "Failed to register a consumer")
-
-	for d := range msgs {
-		if srh.correlationID == d.CorrelationId {
-			msg = d.Body
-			break
-		}
-	}
-
-	return msg
 }
 
 func checkError(err error) {
@@ -225,14 +149,69 @@ func HandleUDP() {
 
 // HandleMiddleware handles middleware connections using rabbitmq
 func HandleMiddleware() {
-	handler := ServerRequestHandler{Host: "localhost", Port: 5672}
-	for {
-		data := handler.Receive()
-		msg := Message{Data: string(data), Addr: nil, Protocol: 2}
-		Messages <- msg
-		select {
-		case msg := <-Reply:
-			handler.Send([]byte(msg.Data))
+	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	failOnError(err, "Failed to connect to RabbitMQ")
+	defer conn.Close()
+
+	ch, err := conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	defer ch.Close()
+
+	q, err := ch.QueueDeclare(
+		"rpc_queue", // name
+		false,       // durable
+		false,       // delete when unused
+		false,       // exclusive
+		false,       // no-wait
+		nil,         // arguments
+	)
+	failOnError(err, "Failed to declare a queue")
+
+	err = ch.Qos(
+		1,     // prefetch count
+		0,     // prefetch size
+		false, // global
+	)
+	failOnError(err, "Failed to set QoS")
+
+	msgs, err := ch.Consume(
+		q.Name, // queue
+		"",     // consumer
+		false,  // auto-ack
+		false,  // exclusive
+		false,  // no-local
+		false,  // no-wait
+		nil,    // args
+	)
+	failOnError(err, "Failed to register a consumer")
+
+	forever := make(chan bool)
+
+	go func() {
+		for d := range msgs {
+			rec := string(d.Body)
+
+			fmt.Println("Received " + string(rec))
+			Messages <- Message{Data: rec, Addr: nil, Protocol: 2}
+
+			ret := <-Reply
+
+			err = ch.Publish(
+				"",        // exchange
+				d.ReplyTo, // routing key
+				false,     // mandatory
+				false,     // immediate
+				amqp.Publishing{
+					ContentType:   "text/plain",
+					CorrelationId: d.CorrelationId,
+					Body:          []byte(ret.Data),
+				})
+			failOnError(err, "Failed to publish a message")
+
+			d.Ack(false)
 		}
-	}
+	}()
+
+	log.Printf("Awaiting Requests with RabbitMQ")
+	<-forever
 }

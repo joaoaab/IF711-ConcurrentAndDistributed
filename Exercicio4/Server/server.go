@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"./calculator"
 	"./models"
 	"./shandler"
 )
@@ -12,55 +13,7 @@ import (
 // 0 for TCP
 // 1 for UDP
 // 2 for Middleware
-const connType = 0
-
-func fib(n int) int {
-	if n == 0 {
-		return 0
-	}
-	if n == 1 {
-		return 1
-	}
-	a := 0
-	b := 1
-	c := 1
-	for i := 1; i < n; i++ {
-		c = a + b
-		a = b
-		b = c
-	}
-	return c
-}
-
-func mdc(a, b int) int {
-	if b == 0 {
-		return a
-	}
-	return mdc(b, a%b)
-}
-
-func mmc(a, b int) int {
-	return a * b / mdc(a, b)
-}
-
-func pow(base, exponent int) int {
-	ans := 1
-	if exponent == 0 {
-		return 1
-	}
-	if exponent < 0 {
-		base = 1 / base
-		exponent *= -1
-	}
-	for exponent > 0 {
-		if exponent%2 == 1 {
-			ans *= base
-		}
-		base = base * base
-		exponent /= 2
-	}
-	return ans
-}
+const connType = 2
 
 //Invoke Invokes the calculations and return the json of the answer
 func Invoke(data string) models.Operation {
@@ -77,19 +30,19 @@ func calculate(frame models.Operation) int {
 	var ans int
 	switch frame.GetName() {
 	case "fib":
-		ans = fib(frame.GetParam())
+		ans = calculator.Fib(frame.GetParam())
 	case "pow":
 		base := frame.GetParam()
 		exp := frame.GetParam()
-		ans = pow(base, exp)
+		ans = calculator.Pow(base, exp)
 	case "mdc":
 		a := frame.GetParam()
 		b := frame.GetParam()
-		ans = mdc(a, b)
+		ans = calculator.Mdc(a, b)
 	case "mmc":
 		a := frame.GetParam()
 		b := frame.GetParam()
-		ans = mmc(a, b)
+		ans = calculator.Mmc(a, b)
 	}
 	return ans
 }
