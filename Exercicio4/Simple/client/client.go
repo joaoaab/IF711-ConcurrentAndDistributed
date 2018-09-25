@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -86,15 +87,13 @@ func fibonacciRPC(n int) (res int, err error) {
 }
 
 func main() {
-	rand.Seed(time.Now().UTC().UnixNano())
-
-	n := bodyFrom(os.Args)
-
-	log.Printf(" [x] Requesting fib(%d)", n)
-	res, err := fibonacciRPC(n)
-	failOnError(err, "Failed to handle RPC request")
-
-	log.Printf(" [.] Got %d", res)
+	for i := 0; i < 1000; i++ {
+		start := time.Now()
+		_, err := fibonacciRPC(15)
+		failOnError(err, "Failed to handle RPC request")
+		elapsed := time.Since(start)
+		fmt.Printf("%.0f\n", float64(elapsed)/float64(time.Millisecond))
+	}
 }
 
 func bodyFrom(args []string) int {

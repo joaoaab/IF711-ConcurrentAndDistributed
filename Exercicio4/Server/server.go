@@ -13,7 +13,7 @@ import (
 // 0 for TCP
 // 1 for UDP
 // 2 for Middleware
-const connType = 2
+const connType = 1
 
 //Invoke Invokes the calculations and return the json of the answer
 func Invoke(data string) models.Operation {
@@ -60,7 +60,7 @@ func sendAnswer(msg shandler.Message, frame models.Operation, ans int) {
 		fmt.Println(err)
 		os.Exit(11)
 	}
-	println("Package Sent : " + ret.Data)
+	//println("Package Sent : " + ret.Data)
 	shandler.Reply <- ret
 }
 

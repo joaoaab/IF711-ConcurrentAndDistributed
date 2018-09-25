@@ -1,8 +1,10 @@
 package crh
 
 import (
+	"bufio"
 	"log"
 	"math/rand"
+	"net"
 
 	"github.com/streadway/amqp"
 )
@@ -27,6 +29,8 @@ func failOnError(err error, msg string) {
 
 // ClientRequestHandler docstring.
 type ClientRequestHandler struct {
+	TCPConnection net.Conn
+	UDPConnection *net.UDPConn
 	Host          string
 	Port          int
 	connection    *amqp.Connection
@@ -37,8 +41,34 @@ type ClientRequestHandler struct {
 	// receiveMsgSize int
 }
 
-// Send docstring.
-func (crh *ClientRequestHandler) Send(outcoming []byte) {
+// SendUDP docstring
+func (crh *ClientRequestHandler) SendUDP(outcoming []byte) {
+	crh.UDPConnection.Write(outcoming)
+}
+
+// ReceiveUDP docstring
+func (crh *ClientRequestHandler) ReceiveUDP() []byte {
+	buf := make([]byte, 1024)
+	n, _, err := crh.UDPConnection.ReadFromUDP(buf)
+	failOnError(err, "Error reading from UDP")
+	return buf[0:n]
+}
+
+// SendTCP docstring
+func (crh *ClientRequestHandler) SendTCP(outcoming []byte) {
+	crh.TCPConnection.Write(outcoming)
+}
+
+// ReceiveTCP docstring
+func (crh *ClientRequestHandler) ReceiveTCP() []byte {
+	reader := bufio.NewReader(crh.TCPConnection)
+	ans, err := reader.ReadBytes('\n')
+	failOnError(err, "Failed to read from TCP")
+	return ans
+}
+
+// SendMiddleware docstring.
+func (crh *ClientRequestHandler) SendMiddleware(outcoming []byte) {
 	// crh.sentMsgSize = len(outcoming)
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
@@ -77,8 +107,8 @@ func (crh *ClientRequestHandler) Send(outcoming []byte) {
 	crh.correlationID = corrID
 }
 
-// Receive docstring.
-func (crh *ClientRequestHandler) Receive() []byte {
+// ReceiveMiddlware docstring.
+func (crh *ClientRequestHandler) ReceiveMiddleware() []byte {
 	defer crh.connection.Close()
 	defer crh.channel.Close()
 

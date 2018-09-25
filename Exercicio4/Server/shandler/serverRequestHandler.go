@@ -93,7 +93,7 @@ func HandleTCP() {
 	newTCPConnections := make(chan net.Conn)
 	deadTCPConnections := make(chan net.Conn)
 	TCPMessages := make(chan Message)
-	s, err := net.Listen("tcp", "localhost:6900")
+	s, err := net.Listen("tcp", "localhost:6969")
 	checkError(err)
 	go acceptTCPConnections(s, newTCPConnections)
 	defer s.Close()
@@ -191,7 +191,7 @@ func HandleMiddleware() {
 		for d := range msgs {
 			rec := string(d.Body)
 
-			fmt.Println("Received " + string(rec))
+			//fmt.Println("Received " + string(rec))
 			Messages <- Message{Data: rec, Addr: nil, Protocol: 2}
 
 			ret := <-Reply
