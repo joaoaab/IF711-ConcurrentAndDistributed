@@ -49,7 +49,7 @@ func (r *Requestor) Invoke(op *models.Operation) models.Response {
 			r.handler.TCPConnection, err = net.Dial("tcp", r.handler.Host+":"+strconv.Itoa(r.handler.Port))
 			failOnError(err, "Couldn't Create TCP'Connection")
 			defer r.handler.TCPConnection.Close()
-			fmt.Println("Entered")
+			//fmt.Println("Entered")
 		}
 	case 1:
 		r.handler = crh.ClientRequestHandler{Host: "localhost", Port: 1111}

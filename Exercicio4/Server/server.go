@@ -76,7 +76,7 @@ func main() {
 	for {
 		select {
 		case msg := <-shandler.Messages:
-			fmt.Println("Package Received : " + msg.Data)
+			//fmt.Println("Package Received : " + msg.Data)
 			frame := Invoke(msg.Data)
 			ans := calculate(frame)
 			sendAnswer(msg, frame, ans)
