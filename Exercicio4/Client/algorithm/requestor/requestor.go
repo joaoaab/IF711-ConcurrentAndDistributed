@@ -15,7 +15,7 @@ import (
 // TCP = 0
 // UDP = 1
 // RabbitMQ = 2
-const connType = 1
+const connType = 0
 
 // Requestor docstring.
 type Requestor struct {
@@ -34,6 +34,9 @@ func (r *Requestor) Invoke(op *models.Operation) models.Response {
 
 	// Serialização
 	msg, err := json.Marshal(op)
+	/*for index, letter := range msg {
+		fmt.Printf("%d -> %d\n", index, letter)
+	}*/
 	if err != nil {
 		fmt.Println(err)
 		return models.Response{Name: "err", Result: 404}
@@ -41,14 +44,19 @@ func (r *Requestor) Invoke(op *models.Operation) models.Response {
 	// Create Structures to connect to server
 	switch connType {
 	case 0:
-		r.handler = crh.ClientRequestHandler{Host: "localhost", Port: 6969}
-		r.handler.TCPConnection, err = net.Dial("tcp", r.handler.Host+":"+strconv.Itoa(r.handler.Port))
-		failOnError(err, "Couldn't Create TCP'Connection")
+		if r.handler.TCPConnection == nil {
+			r.handler = crh.ClientRequestHandler{Host: "localhost", Port: 6969}
+			r.handler.TCPConnection, err = net.Dial("tcp", r.handler.Host+":"+strconv.Itoa(r.handler.Port))
+			failOnError(err, "Couldn't Create TCP'Connection")
+			defer r.handler.TCPConnection.Close()
+			fmt.Println("Entered")
+		}
 	case 1:
 		r.handler = crh.ClientRequestHandler{Host: "localhost", Port: 1111}
 		ServerAddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:1111")
 		LocalAddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:0")
 		r.handler.UDPConnection, _ = net.DialUDP("udp", LocalAddr, ServerAddr)
+		defer r.handler.UDPConnection.Close()
 	case 2:
 		r.handler = crh.ClientRequestHandler{Host: "localhost", Port: 5672} // RabbitMQ
 	}
@@ -58,22 +66,21 @@ func (r *Requestor) Invoke(op *models.Operation) models.Response {
 	case 0:
 		start := time.Now()
 		r.handler.SendTCP(msg)
-		fmt.Println("Sent" + string(msg))
 		aux = r.handler.ReceiveTCP()
 		elapsed := time.Since(start)
-		fmt.Printf("%.0f\n", float64(elapsed)/float64(time.Millisecond))
+		fmt.Printf("%.3f\n", float64(elapsed)/float64(time.Millisecond))
 	case 1:
 		start := time.Now()
 		r.handler.SendUDP(msg)
 		aux = r.handler.ReceiveUDP()
 		elapsed := time.Since(start)
-		fmt.Printf("%.0f\n", float64(elapsed)/float64(time.Millisecond))
+		fmt.Printf("%.3f\n", float64(elapsed)/float64(time.Millisecond))
 	case 2:
 		start := time.Now()
 		r.handler.SendMiddleware(msg)
 		aux = r.handler.ReceiveMiddleware()
 		elapsed := time.Since(start)
-		fmt.Printf("%.0f\n", float64(elapsed)/float64(time.Millisecond))
+		fmt.Printf("%.3f\n", float64(elapsed)/float64(time.Millisecond))
 	}
 	/*// Begin time evaluation
 	start := time.Now()

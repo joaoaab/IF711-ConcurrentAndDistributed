@@ -64,11 +64,11 @@ func acceptTCPConnections(server net.Listener, newConnections chan net.Conn) {
 func handleTCPConnection(conn net.Conn, TCPMessages chan Message, deadTCPConnections chan net.Conn) {
 	reader := bufio.NewReader(conn)
 	for {
-		message, err := reader.ReadString('\n')
+		message, err := reader.ReadBytes('}')
 		if err != nil {
 			break
 		}
-		m := Message{message, conn.RemoteAddr(), 0}
+		m := Message{string(message), conn.RemoteAddr(), 0}
 		//fmt.Println("li do socket " + m.Data)
 		TCPMessages <- m
 	}

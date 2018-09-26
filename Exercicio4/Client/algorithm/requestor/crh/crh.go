@@ -107,7 +107,7 @@ func (crh *ClientRequestHandler) SendMiddleware(outcoming []byte) {
 	crh.correlationID = corrID
 }
 
-// ReceiveMiddlware docstring.
+// ReceiveMiddleware docstring.
 func (crh *ClientRequestHandler) ReceiveMiddleware() []byte {
 	defer crh.connection.Close()
 	defer crh.channel.Close()

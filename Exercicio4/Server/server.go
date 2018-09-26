@@ -13,7 +13,7 @@ import (
 // 0 for TCP
 // 1 for UDP
 // 2 for Middleware
-const connType = 1
+const connType = 0
 
 //Invoke Invokes the calculations and return the json of the answer
 func Invoke(data string) models.Operation {

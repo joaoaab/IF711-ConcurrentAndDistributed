@@ -89,7 +89,8 @@ func fibonacciRPC(n int) (res int, err error) {
 func main() {
 	for i := 0; i < 1000; i++ {
 		start := time.Now()
-		_, err := fibonacciRPC(15)
+		res, err := fibonacciRPC(15)
+		res--
 		failOnError(err, "Failed to handle RPC request")
 		elapsed := time.Since(start)
 		fmt.Printf("%.0f\n", float64(elapsed)/float64(time.Millisecond))

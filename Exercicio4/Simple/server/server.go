@@ -16,11 +16,49 @@ func failOnError(err error, msg string) {
 func fib(n int) int {
 	if n == 0 {
 		return 0
-	} else if n == 1 {
-		return 1
-	} else {
-		return fib(n-1) + fib(n-2)
 	}
+	if n == 1 {
+		return 1
+	}
+	a := 0
+	b := 1
+	c := 1
+	for i := 1; i < n; i++ {
+		c = a + b
+		a = b
+		b = c
+	}
+	return c
+}
+
+func mdc(a, b int) int {
+	if b == 0 {
+		return a
+	}
+	return mdc(b, a%b)
+}
+
+func mmc(a, b int) int {
+	return a * b / mdc(a, b)
+}
+
+func pow(base, exponent int) int {
+	ans := 1
+	if exponent == 0 {
+		return 1
+	}
+	if exponent < 0 {
+		base = 1 / base
+		exponent *= -1
+	}
+	for exponent > 0 {
+		if exponent%2 == 1 {
+			ans *= base
+		}
+		base = base * base
+		exponent /= 2
+	}
+	return ans
 }
 
 func main() {
@@ -67,7 +105,7 @@ func main() {
 			n, err := strconv.Atoi(string(d.Body))
 			failOnError(err, "Failed to convert body to integer")
 
-			log.Printf(" [.] fib(%d)", n)
+			//log.Printf(" [.] fib(%d)", n)
 			response := fib(n)
 
 			err = ch.Publish(
