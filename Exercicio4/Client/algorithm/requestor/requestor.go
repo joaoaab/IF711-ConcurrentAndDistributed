@@ -26,17 +26,13 @@ func (r *Requestor) Setup(connType int) error {
 	var port int
 	switch connType {
 	case 0: // TCP
-		r.handler = new(crh.MiddlewareRequestHandler) // {Host: "localhost", Port: 6969}
+		r.handler = new(crh.TCPRequestHandler)
 		port = 6969
-		// r.handler.TCPConnection, err = net.Dial("tcp", r.handler.Host+":"+strconv.Itoa(r.handler.Port))
 	case 1: // UDP
-		r.handler = new(crh.MiddlewareRequestHandler) // {Host: "localhost", Port: 1111}
+		r.handler = new(crh.UDPRequestHandler)
 		port = 1111
-		// ServerAddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:1111")
-		// LocalAddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:0")
-		// r.handler.UDPConnection, _ = net.DialUDP("udp", LocalAddr, ServerAddr)
 	case 2: // RabbitMQ
-		r.handler = new(crh.MiddlewareRequestHandler) // {Host: "localhost", Port: 5672}
+		r.handler = new(crh.MiddlewareRequestHandler)
 		port = 5672
 	}
 
@@ -61,9 +57,11 @@ func (r *Requestor) Invoke(op *models.Operation) models.Response {
 	//	Send and Receive
 	start := time.Now()
 	r.handler.Send(msg)
+	// fmt.Println("Teste1")
 	aux := r.handler.Receive()
+	// fmt.Println("Teste2")
 	elapsed := time.Since(start)
-	fmt.Printf("%.2f\n", float64(elapsed)/float64(time.Millisecond))
+	fmt.Printf("%.3f\n", float64(elapsed)/float64(time.Millisecond))
 
 	// Deserealização
 	err = json.Unmarshal(aux, &res)

@@ -14,7 +14,7 @@ type Calculator struct {
 func (c *Calculator) Setup() error {
 	if c.requestor == nil {
 		c.requestor = new(requestor.Requestor)
-		return c.requestor.Setup(2) // 0=tcp, 1=udp, 2=rabbitmq.rpc
+		return c.requestor.Setup(0) // 0=tcp, 1=udp, 2=rabbitmq.rpc
 	}
 	return nil
 }

@@ -1,9 +1,11 @@
 package crh
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"math/rand"
+	"net"
 
 	"github.com/streadway/amqp"
 )
@@ -83,11 +85,8 @@ func (handler *MiddlewareRequestHandler) Setup(host string, port int) error {
 		false,              // no-wait
 		nil,                // args
 	)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 // Send for MiddlewareRequestHandler.
@@ -126,42 +125,79 @@ func (handler *MiddlewareRequestHandler) Close() {
 	handler.connection.Close()
 }
 
-// // TcpRequestHandler docstrig.
-// type TCPRequestHandler struct {
-// 	Host          string
-// 	Port          int
-// 	connection    *net.Conn
-// }
+// UDPRequestHandler docstrig.
+type UDPRequestHandler struct {
+	host       string
+	port       int
+	connection *net.UDPConn
+}
 
-// // UdpRequestHandler docstrig.
-// type UDPRequestHandler struct {
-// 	Host          string
-// 	Port          int
-// 	connection    *net.UDPConn
-// }
+// Setup for UDPRequestHandler.
+func (handler *UDPRequestHandler) Setup(host string, port int) error {
+	handler.host = host
+	handler.port = port
+	ServerAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		return err
+	}
+	LocalAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
+	if err != nil {
+		return err
+	}
+	handler.connection, err = net.DialUDP("udp", LocalAddr, ServerAddr)
 
-// // SendUDP docstring
-// func (crh *ClientRequestHandler) SendUDP(outcoming []byte) {
-// 	crh.UDPConnection.Write(outcoming)
-// }
+	return err
+}
 
-// // ReceiveUDP docstring
-// func (crh *ClientRequestHandler) ReceiveUDP() []byte {
-// 	buf := make([]byte, 1024)
-// 	n, _, err := crh.UDPConnection.ReadFromUDP(buf)
-// 	failOnError(err, "Error reading from UDP")
-// 	return buf[0:n]
-// }
+// Send for UDPRequestHandler.
+func (handler *UDPRequestHandler) Send(outcoming []byte) {
+	handler.connection.Write(outcoming)
+}
 
-// // SendTCP docstring
-// func (crh *ClientRequestHandler) SendTCP(outcoming []byte) {
-// 	crh.TCPConnection.Write(outcoming)
-// }
+// Receive for UDPRequestHandler.
+func (handler *UDPRequestHandler) Receive() []byte {
+	buf := make([]byte, 1024)
+	n, _, err := handler.connection.ReadFromUDP(buf)
+	failOnError(err, "Error reading from UDP")
+	return buf[0:n]
+}
 
-// // ReceiveTCP docstring
-// func (crh *ClientRequestHandler) ReceiveTCP() []byte {
-// 	reader := bufio.NewReader(crh.TCPConnection)
-// 	ans, err := reader.ReadBytes('\n')
-// 	failOnError(err, "Failed to read from TCP")
-// 	return ans
-// }
+// Close for UDPRequestHandler.
+func (handler *UDPRequestHandler) Close() {
+	handler.connection.Close()
+}
+
+// TCPRequestHandler docstrig.
+type TCPRequestHandler struct {
+	host       string
+	port       int
+	connection net.Conn
+}
+
+// Setup for TCPRequestHandler.
+func (handler *TCPRequestHandler) Setup(host string, port int) error {
+	var err error
+	handler.host = host
+	handler.port = port
+	handler.connection, err = net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+
+	return err
+}
+
+// Send for TCPRequestHandler.
+func (handler *TCPRequestHandler) Send(outcoming []byte) {
+	handler.connection.Write(outcoming)
+}
+
+// Receive for TCPRequestHandler.
+func (handler *TCPRequestHandler) Receive() []byte {
+	reader := bufio.NewReader(handler.connection)
+	ans, err := reader.ReadBytes('\n')
+	failOnError(err, "Failed to read from TCP")
+	return ans
+}
+
+// Close for TCPRequestHandler.
+func (handler *TCPRequestHandler) Close() {
+	handler.connection.Close()
+}
