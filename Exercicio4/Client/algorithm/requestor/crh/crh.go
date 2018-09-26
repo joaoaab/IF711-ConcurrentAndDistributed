@@ -2,6 +2,7 @@ package crh
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
@@ -28,55 +29,42 @@ func failOnError(err error, msg string) {
 }
 
 // ClientRequestHandler docstring.
-type ClientRequestHandler struct {
-	TCPConnection net.Conn
-	UDPConnection *net.UDPConn
-	Host          string
-	Port          int
+type ClientRequestHandler interface {
+	Setup(host string, port int) error
+	Send(outcoming []byte)
+	Receive() []byte
+	Close()
+}
+
+// MiddlewareRequestHandler docstrig.
+type MiddlewareRequestHandler struct {
+	host          string
+	port          int
 	connection    *amqp.Connection
 	channel       *amqp.Channel
 	queue         amqp.Queue
+	incoming      <-chan amqp.Delivery
 	correlationID string
-	// sentMsgSize    int
-	// receiveMsgSize int
 }
 
-// SendUDP docstring
-func (crh *ClientRequestHandler) SendUDP(outcoming []byte) {
-	crh.UDPConnection.Write(outcoming)
-}
+// Setup for MiddlewareRequestHandler.
+func (handler *MiddlewareRequestHandler) Setup(host string, port int) error {
+	var err error
+	handler.host = host
+	handler.port = port
+	handler.correlationID = randomString(32)
 
-// ReceiveUDP docstring
-func (crh *ClientRequestHandler) ReceiveUDP() []byte {
-	buf := make([]byte, 1024)
-	n, _, err := crh.UDPConnection.ReadFromUDP(buf)
-	failOnError(err, "Error reading from UDP")
-	return buf[0:n]
-}
+	handler.connection, err = amqp.Dial(fmt.Sprintf("amqp://guest:guest@%s:%d/", host, port))
+	if err != nil {
+		return err
+	}
 
-// SendTCP docstring
-func (crh *ClientRequestHandler) SendTCP(outcoming []byte) {
-	crh.TCPConnection.Write(outcoming)
-}
+	handler.channel, err = handler.connection.Channel()
+	if err != nil {
+		return err
+	}
 
-// ReceiveTCP docstring
-func (crh *ClientRequestHandler) ReceiveTCP() []byte {
-	reader := bufio.NewReader(crh.TCPConnection)
-	ans, err := reader.ReadBytes('\n')
-	failOnError(err, "Failed to read from TCP")
-	return ans
-}
-
-// SendMiddleware docstring.
-func (crh *ClientRequestHandler) SendMiddleware(outcoming []byte) {
-	// crh.sentMsgSize = len(outcoming)
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-	failOnError(err, "Failed to connect to RabbitMQ")
-
-	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
-
-	q, err := ch.QueueDeclare(
+	handler.queue, err = handler.channel.QueueDeclare(
 		"",    // name
 		false, // durable
 		false, // delete when unused
@@ -84,52 +72,132 @@ func (crh *ClientRequestHandler) SendMiddleware(outcoming []byte) {
 		false, // noWait
 		nil,   // arguments
 	)
-	failOnError(err, "Failed to declare a queue")
+	if err != nil {
+		return err
+	}
 
-	corrID := randomString(32)
+	handler.incoming, err = handler.channel.Consume(
+		handler.queue.Name, // queue
+		"",                 // consumer
+		true,               // auto-ack
+		false,              // exclusive
+		false,              // no-local
+		false,              // no-wait
+		nil,                // args
+	)
 
-	err = ch.Publish(
+	return err
+}
+
+// Send for MiddlewareRequestHandler.
+func (handler *MiddlewareRequestHandler) Send(outcoming []byte) {
+	err := handler.channel.Publish(
 		"",          // exchange
 		"rpc_queue", // routing key
 		false,       // mandatory
 		false,       // immediate
 		amqp.Publishing{
 			ContentType:   "text/plain",
-			CorrelationId: corrID,
-			ReplyTo:       q.Name,
+			CorrelationId: handler.correlationID,
+			ReplyTo:       handler.queue.Name,
 			Body:          outcoming,
 		})
 	failOnError(err, "Failed to publish a message")
-
-	crh.connection = conn
-	crh.channel = ch
-	crh.queue = q
-	crh.correlationID = corrID
 }
 
-// ReceiveMiddleware docstring.
-func (crh *ClientRequestHandler) ReceiveMiddleware() []byte {
-	defer crh.connection.Close()
-	defer crh.channel.Close()
-
+// Receive for MiddlewareRequestHandler.
+func (handler *MiddlewareRequestHandler) Receive() []byte {
 	msg := []byte("error")
-	msgs, err := crh.channel.Consume(
-		crh.queue.Name, // queue
-		"",             // consumer
-		true,           // auto-ack
-		false,          // exclusive
-		false,          // no-local
-		false,          // no-wait
-		nil,            // args
-	)
-	failOnError(err, "Failed to register a consumer")
 
-	for d := range msgs {
-		if crh.correlationID == d.CorrelationId {
+	for d := range handler.incoming {
+		if handler.correlationID == d.CorrelationId {
 			msg = d.Body
 			break
 		}
 	}
 
 	return msg
+}
+
+// Close for MiddlewareRequestHandler.
+func (handler *MiddlewareRequestHandler) Close() {
+	handler.channel.Close()
+	handler.connection.Close()
+}
+
+// UDPRequestHandler docstrig.
+type UDPRequestHandler struct {
+	host       string
+	port       int
+	connection *net.UDPConn
+}
+
+// Setup for UDPRequestHandler.
+func (handler *UDPRequestHandler) Setup(host string, port int) error {
+	handler.host = host
+	handler.port = port
+	ServerAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		return err
+	}
+	LocalAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
+	if err != nil {
+		return err
+	}
+	handler.connection, err = net.DialUDP("udp", LocalAddr, ServerAddr)
+
+	return err
+}
+
+// Send for UDPRequestHandler.
+func (handler *UDPRequestHandler) Send(outcoming []byte) {
+	handler.connection.Write(outcoming)
+}
+
+// Receive for UDPRequestHandler.
+func (handler *UDPRequestHandler) Receive() []byte {
+	buf := make([]byte, 1024)
+	n, _, err := handler.connection.ReadFromUDP(buf)
+	failOnError(err, "Error reading from UDP")
+	return buf[0:n]
+}
+
+// Close for UDPRequestHandler.
+func (handler *UDPRequestHandler) Close() {
+	handler.connection.Close()
+}
+
+// TCPRequestHandler docstrig.
+type TCPRequestHandler struct {
+	host       string
+	port       int
+	connection net.Conn
+}
+
+// Setup for TCPRequestHandler.
+func (handler *TCPRequestHandler) Setup(host string, port int) error {
+	var err error
+	handler.host = host
+	handler.port = port
+	handler.connection, err = net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+
+	return err
+}
+
+// Send for TCPRequestHandler.
+func (handler *TCPRequestHandler) Send(outcoming []byte) {
+	handler.connection.Write(outcoming)
+}
+
+// Receive for TCPRequestHandler.
+func (handler *TCPRequestHandler) Receive() []byte {
+	reader := bufio.NewReader(handler.connection)
+	ans, err := reader.ReadBytes('\n')
+	failOnError(err, "Failed to read from TCP")
+	return ans
+}
+
+// Close for TCPRequestHandler.
+func (handler *TCPRequestHandler) Close() {
+	handler.connection.Close()
 }
