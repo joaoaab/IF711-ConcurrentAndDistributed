@@ -30,16 +30,20 @@ func randInt(min int, max int) int {
 	return min + rand.Intn(max-min)
 }
 
-func fibonacciRPC(n int) (res int, err error) {
+func fibonacciRPC(n int) (int, error) {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
-	ch, err := conn.Channel()
+	chin, err := conn.Channel()
 	failOnError(err, "Failed to open a channel")
-	defer ch.Close()
+	defer chin.Close()
 
-	q, err := ch.QueueDeclare(
+	chout, err := conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	defer chout.Close()
+
+	q, err := chout.QueueDeclare(
 		"",    // name
 		false, // durable
 		false, // delete when unused
@@ -49,7 +53,7 @@ func fibonacciRPC(n int) (res int, err error) {
 	)
 	failOnError(err, "Failed to declare a queue")
 
-	msgs, err := ch.Consume(
+	msgs, err := chin.Consume(
 		q.Name, // queue
 		"",     // consumer
 		true,   // auto-ack
@@ -60,40 +64,41 @@ func fibonacciRPC(n int) (res int, err error) {
 	)
 	failOnError(err, "Failed to register a consumer")
 
-	corrId := randomString(32)
+	corrID := randomString(32)
 
-	err = ch.Publish(
+	start := time.Now()
+	err = chout.Publish(
 		"",          // exchange
 		"rpc_queue", // routing key
 		false,       // mandatory
 		false,       // immediate
 		amqp.Publishing{
 			ContentType:   "text/plain",
-			CorrelationId: corrId,
+			CorrelationId: corrID,
 			ReplyTo:       q.Name,
 			Body:          []byte(strconv.Itoa(n)),
 		})
 	failOnError(err, "Failed to publish a message")
 
+	var aux []byte
 	for d := range msgs {
-		if corrId == d.CorrelationId {
-			res, err = strconv.Atoi(string(d.Body))
+		if corrID == d.CorrelationId {
+			aux = d.Body
 			failOnError(err, "Failed to convert body to integer")
 			break
 		}
 	}
+	elapsed := time.Since(start)
+	fmt.Printf("%.3f\n", float64(elapsed)/float64(time.Millisecond))
 
-	return
+	return strconv.Atoi(string(aux))
 }
 
 func main() {
 	for i := 0; i < 1000; i++ {
-		start := time.Now()
-		res, err := fibonacciRPC(15)
-		res--
+		_, err := fibonacciRPC(15)
 		failOnError(err, "Failed to handle RPC request")
-		elapsed := time.Since(start)
-		fmt.Printf("%.0f\n", float64(elapsed)/float64(time.Millisecond))
+		time.Sleep(10 * time.Second)
 	}
 }
 

@@ -66,11 +66,15 @@ func main() {
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
-	ch, err := conn.Channel()
+	chin, err := conn.Channel()
 	failOnError(err, "Failed to open a channel")
-	defer ch.Close()
+	defer chin.Close()
 
-	q, err := ch.QueueDeclare(
+	chout, err := conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	defer chout.Close()
+
+	q, err := chin.QueueDeclare(
 		"rpc_queue", // name
 		false,       // durable
 		false,       // delete when unused
@@ -80,14 +84,14 @@ func main() {
 	)
 	failOnError(err, "Failed to declare a queue")
 
-	err = ch.Qos(
+	err = chin.Qos(
 		1,     // prefetch count
 		0,     // prefetch size
 		false, // global
 	)
 	failOnError(err, "Failed to set QoS")
 
-	msgs, err := ch.Consume(
+	msgs, err := chin.Consume(
 		q.Name, // queue
 		"",     // consumer
 		false,  // auto-ack
@@ -108,7 +112,7 @@ func main() {
 			//log.Printf(" [.] fib(%d)", n)
 			response := fib(n)
 
-			err = ch.Publish(
+			err = chout.Publish(
 				"",        // exchange
 				d.ReplyTo, // routing key
 				false,     // mandatory
