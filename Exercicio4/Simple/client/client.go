@@ -52,46 +52,12 @@ func randInt(min int, max int) int {
 	return min + rand.Intn(max-min)
 }
 
-func fibonacciRPC(n int) Response {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-	failOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
-
-	chin, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
-	defer chin.Close()
-
-	chout, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
-	defer chout.Close()
-
-	q, err := chout.QueueDeclare(
-		"",    // name
-		false, // durable
-		false, // delete when unused
-		true,  // exclusive
-		false, // noWait
-		nil,   // arguments
-	)
-	failOnError(err, "Failed to declare a queue")
-
-	msgs, err := chin.Consume(
-		q.Name, // queue
-		"",     // consumer
-		true,   // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
-	)
-	failOnError(err, "Failed to register a consumer")
-
+func fibonacciRPC(n int, msgs <-chan amqp.Delivery, chout *amqp.Channel, q amqp.Queue) Response {
 	corrID := randomString(32)
 	op := new(Operation)
 	op.Name = "fib"
 	op.AddParam(15)
-	var outcoming []byte
-	outcoming, err = json.Marshal(op)
+	outcoming, err := json.Marshal(op)
 
 	start := time.Now()
 	err = chout.Publish(
@@ -125,8 +91,41 @@ func fibonacciRPC(n int) Response {
 }
 
 func main() {
+	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	failOnError(err, "Failed to connect to RabbitMQ")
+	defer conn.Close()
+
+	chin, err := conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	defer chin.Close()
+
+	chout, err := conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	defer chout.Close()
+
+	q, err := chout.QueueDeclare(
+		"",    // name
+		false, // durable
+		false, // delete when unused
+		true,  // exclusive
+		false, // noWait
+		nil,   // arguments
+	)
+	failOnError(err, "Failed to declare a queue")
+
+	msgs, err := chin.Consume(
+		q.Name, // queue
+		"",     // consumer
+		true,   // auto-ack
+		false,  // exclusive
+		false,  // no-local
+		false,  // no-wait
+		nil,    // args
+	)
+	failOnError(err, "Failed to register a consumer")
+
 	for i := 0; i < 1000; i++ {
-		fibonacciRPC(15)
+		fibonacciRPC(15, msgs, chout, q)
 		time.Sleep(10 * time.Second)
 	}
 }

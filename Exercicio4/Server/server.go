@@ -14,7 +14,7 @@ import (
 // 1 for UDP
 // 2 for Middleware
 
-const connType = 0
+const connType = 2
 
 //Invoke Invokes the calculations and return the json of the answer
 func Invoke(data string) models.Operation {
@@ -79,7 +79,7 @@ func main() {
 		case msg := <-shandler.Messages:
 			//fmt.Println("Package Received : " + msg.Data)
 			frame := Invoke(msg.Data)
-			ans = calculate(frame)
+			ans := calculate(frame)
 			sendAnswer(msg, frame, ans)
 		}
 	}
