@@ -1,16 +1,38 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
-	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/streadway/amqp"
 )
+
+// Operation docstring.
+type Operation struct {
+	Name   string
+	Params []int
+}
+
+// AddParam docstring.
+func (op *Operation) AddParam(x int) {
+	op.Params = append(op.Params, x)
+}
+
+// GetParam docstring.
+func (op *Operation) GetParam() int {
+	r := op.Params[0]
+	op.Params = op.Params[1:]
+	return r
+}
+
+// Response docstring.
+type Response struct {
+	Name   string
+	Result int
+}
 
 func failOnError(err error, msg string) {
 	if err != nil {
@@ -30,7 +52,7 @@ func randInt(min int, max int) int {
 	return min + rand.Intn(max-min)
 }
 
-func fibonacciRPC(n int) (int, error) {
+func fibonacciRPC(n int) Response {
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -65,6 +87,11 @@ func fibonacciRPC(n int) (int, error) {
 	failOnError(err, "Failed to register a consumer")
 
 	corrID := randomString(32)
+	op := new(Operation)
+	op.Name = "fib"
+	op.AddParam(15)
+	var outcoming []byte
+	outcoming, err = json.Marshal(op)
 
 	start := time.Now()
 	err = chout.Publish(
@@ -76,7 +103,7 @@ func fibonacciRPC(n int) (int, error) {
 			ContentType:   "text/plain",
 			CorrelationId: corrID,
 			ReplyTo:       q.Name,
-			Body:          []byte(strconv.Itoa(n)),
+			Body:          outcoming,
 		})
 	failOnError(err, "Failed to publish a message")
 
@@ -91,25 +118,15 @@ func fibonacciRPC(n int) (int, error) {
 	elapsed := time.Since(start)
 	fmt.Printf("%.3f\n", float64(elapsed)/float64(time.Millisecond))
 
-	return strconv.Atoi(string(aux))
+	var incoming Response
+	err = json.Unmarshal(aux, &incoming)
+
+	return incoming
 }
 
 func main() {
 	for i := 0; i < 1000; i++ {
-		_, err := fibonacciRPC(15)
-		failOnError(err, "Failed to handle RPC request")
+		fibonacciRPC(15)
 		time.Sleep(10 * time.Second)
 	}
-}
-
-func bodyFrom(args []string) int {
-	var s string
-	if (len(args) < 2) || os.Args[1] == "" {
-		s = "30"
-	} else {
-		s = strings.Join(args[1:], " ")
-	}
-	n, err := strconv.Atoi(s)
-	failOnError(err, "Failed to convert arg to integer")
-	return n
 }
