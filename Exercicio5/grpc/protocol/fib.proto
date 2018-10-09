@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package fib;
+
+message Number {
+    int64   value = 1;
+}
+
+message Result{
+    int64   value = 1;
+}
+
+service Calculator{
+    rpc Calc (Number) returns (Result);
+}
+
