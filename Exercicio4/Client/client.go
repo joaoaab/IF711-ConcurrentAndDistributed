@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -18,7 +17,8 @@ func main() {
 	defer c.Close()
 
 	for i := 0; i < 10; i++ {
-		fmt.Printf("Result: %d\n", c.Pow(2, 31))
-		time.Sleep(10 * time.Second) // Tempo pra respirar
+		//fmt.Printf("Result: %d\n", c.Pow(2, 31))
+		c.Fib(15)
+		time.Sleep(1 * time.Second) // Tempo pra respirar
 	}
 }
