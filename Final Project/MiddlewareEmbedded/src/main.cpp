@@ -5,8 +5,8 @@
 #define LDR 2
 #define TOMELE 3
 
-char ssid[] = "Net Quarto";
-char password[] = "paulacqb";
+char ssid[] = "SSID";
+char password[] = "123456";
 int ledStatus = -1;
 StaticJsonBuffer<512> bufferIn;
 StaticJsonBuffer<512> bufferOut;
