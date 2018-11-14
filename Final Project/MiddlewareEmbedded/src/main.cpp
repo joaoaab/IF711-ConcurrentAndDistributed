@@ -15,9 +15,7 @@ WiFiServer server(700);
 
 void setup() {
     Serial.begin(9600);
-    while(!Serial){
-    }
-
+    while(!Serial){}
 
     Serial.println("Trying to connect to network");
     Serial.println(ssid);
@@ -27,9 +25,9 @@ void setup() {
 
     if(status != WL_CONNECTED){
         Serial.println("Failed to connect");
-        while(true){
-            Serial.println("kk");
-        }
+        // while(true){
+        //     Serial.println("kk");
+        // }
     }
     Serial.println("Connected.");
     Serial.print("MAC Addr: ");
